@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Breakout Platform – Web</title>
+  <style>
+    :root {
+      --bg:       #0a0a1a;
+      --surface:  #12122a;
+      --accent:   #7c3aed;
+      --accent2:  #06b6d4;
+      --gold:     #f59e0b;
+      --silver:   #94a3b8;
+      --bronze:   #b45309;
+      --text:     #e2e8f0;
+      --muted:    #64748b;
+      --ok:       #22c55e;
+      --err:      #ef4444;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh; padding: 2rem;
+    }
+    
+    /* Navbar */
+    .navbar {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 2.5rem;
+      border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem;
+    }
+    .navbar h1 {
+      font-size: 1.8rem; font-weight: 800; letter-spacing: -1px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .nav-actions { display: flex; gap: 1rem; align-items: center; }
+    .btn {
+      background: var(--surface); color: var(--text); border: 1px solid rgba(255,255,255,0.2);
+      padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer; transition: 0.2s;
+    }
+    .btn:hover { background: rgba(255,255,255,0.1); }
+    .btn-primary { background: var(--accent); border-color: var(--accent); }
+    .btn-primary:hover { background: #6d28d9; }
+
+    /* Status bar */
+    #status-bar {
+      display: flex; gap: 1rem; justify-content: center;
+      flex-wrap: wrap; margin-bottom: 2rem;
+    }
+    .badge {
+      background: var(--surface); border-radius: 999px;
+      padding: .35rem 1rem; font-size: .8rem; font-weight: 600;
+      border: 1px solid rgba(255,255,255,.08);
+    }
+    .badge.ok  { border-color: var(--ok);  color: var(--ok);  }
+    .badge.err { border-color: var(--err); color: var(--err); }
+
+    /* Tabs */
+    .tabs {
+      display: flex; gap: .5rem; margin-bottom: 1.5rem;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .tab {
+      background: none; border: none; cursor: pointer;
+      color: var(--muted); font-size: .95rem; padding: .6rem 1.2rem;
+      border-bottom: 2px solid transparent; transition: .2s;
+    }
+    .tab.active { color: var(--accent2); border-color: var(--accent2); }
+    .tab:hover  { color: var(--text); }
+
+    /* Cards & Tables */
+    .card {
+      background: var(--surface); border-radius: 1rem;
+      overflow: hidden; border: 1px solid rgba(255,255,255,.06); padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .card-nopad { padding: 0; }
+    
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      background: rgba(124,58,237,.15);
+      color: var(--accent2); font-size: .75rem; letter-spacing: .1em;
+      text-transform: uppercase; padding: .85rem 1rem; text-align: left;
+    }
+    tbody tr { border-top: 1px solid rgba(255,255,255,.04); transition: .15s; }
+    tbody tr:hover { background: rgba(255,255,255,.03); }
+    td { padding: .8rem 1rem; font-size: .9rem; }
+
+    .rank { font-weight: 700; font-size: 1rem; width: 3rem; }
+    .rank.gold   { color: var(--gold);   }
+    .rank.silver { color: var(--silver); }
+    .rank.bronze { color: var(--bronze); }
+    .score { font-weight: 700; color: var(--accent2); font-size: 1rem; }
+    
+    .pill {
+      display: inline-block; border-radius: 999px;
+      padding: .15rem .6rem; font-size: .75rem; font-weight: 600;
+    }
+    .pill.completed { background: rgba(34,197,94,.15);  color: var(--ok);  }
+    .pill.gameover  { background: rgba(239,68,68,.12);  color: var(--err); }
+
+    /* User Profile Link */
+    .user-link { color: var(--accent2); cursor: pointer; text-decoration: underline; }
+    .user-link:hover { color: var(--text); }
+
+    /* Forms */
+    .form-group { margin-bottom: 1rem; }
+    .form-group label { display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: var(--muted); }
+    .form-group input, .form-group textarea {
+      width: 100%; padding: 0.75rem; border-radius: 0.5rem;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+      color: var(--text); font-family: inherit;
+    }
+    
+    /* Avatar */
+    .avatar { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; background: #333; }
+    .avatar-lg { width: 100px; height: 100px; }
+    .profile-header { display: flex; gap: 1.5rem; align-items: center; margin-bottom: 1.5rem; }
+
+    /* Reactions */
+    .reaction-btn {
+      background: none; border: 1px solid rgba(255,255,255,0.1); border-radius: 999px;
+      color: var(--muted); cursor: pointer; padding: 0.2rem 0.5rem; font-size: 0.8rem;
+      transition: 0.2s; display: inline-flex; align-items: center; gap: 0.3rem; margin-right: 0.3rem;
+    }
+    .reaction-btn:hover { background: rgba(255,255,255,0.1); }
+    .reaction-btn.active { background: rgba(124,58,237,0.3); color: var(--text); border-color: var(--accent); }
+
+    .empty { text-align: center; padding: 3rem; color: var(--muted); }
+    #refresh-info { text-align: center; color: var(--muted); font-size: .8rem; margin-top: 1.5rem; }
+  </style>
+</head>
+<body>
+
+<div class="navbar">
+  <h1>🕹️ Breakout Platform</h1>
+  <div class="nav-actions" id="nav-auth-section">
+    <!-- Es carrega dinàmicament via JS -->
+  </div>
+</div>
+
+<div id="status-bar">
+  <span class="badge" id="badge-mysql">Base de Dades: …</span>
+  <span class="badge" id="badge-games">Partides actives: …</span>
+  <span class="badge" id="badge-source">Font: …</span>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('ranking')">🏆 Classificació</button>
+  <button class="tab"        onclick="showTab('active')">🎮 Partides actives</button>
+  <button class="tab"        onclick="showTab('auth')" id="tab-btn-auth">Identifica't</button>
+  <button class="tab"        onclick="showTab('profile')" id="tab-btn-profile" style="display:none">El meu Perfil</button>
+  <button class="tab"        onclick="showTab('user-view')" id="tab-btn-user-view" style="display:none">Vista Perfil</button>
+</div>
+
+<!-- TABS CONTENT -->
+<div id="tab-ranking">
+  <div style="margin-bottom: 1.5rem; display: flex; gap: 0.5rem; justify-content: center;">
+    <button class="btn" id="btn-diff-easy" onclick="setDifficulty('easy')">Fàcil</button>
+    <button class="btn btn-primary" id="btn-diff-normal" onclick="setDifficulty('normal')">Normal</button>
+    <button class="btn" id="btn-diff-hard" onclick="setDifficulty('hard')">Difícil</button>
+  </div>
+  <div class="card card-nopad">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Jugador</th>
+          <th>Estat</th>
+          <th>Punts</th>
+        </tr>
+      </thead>
+      <tbody id="ranking-body">
+        <tr><td colspan="5" class="empty">Carregant…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div id="tab-active" style="display:none">
+  <div id="active-list"></div>
+</div>
+
+<!-- Auth Tab (Login/Register) -->
+<div id="tab-auth" style="display:none">
+  <div class="card" style="max-width: 400px; margin: 0 auto;">
+    <h2 style="margin-bottom: 1rem;">Iniciar Sessió / Registre</h2>
+    <div class="form-group">
+      <label>Nom d'usuari</label>
+      <input type="text" id="auth-username" placeholder="Usuari">
+    </div>
+    <div class="form-group">
+      <label>Contrasenya</label>
+      <input type="password" id="auth-password" placeholder="Contrasenya">
+    </div>
+    <p id="auth-msg" style="color:var(--err); font-size:0.85rem; margin-bottom: 1rem;"></p>
+    <div style="display:flex; gap:0.5rem;">
+      <button class="btn btn-primary" onclick="doAuth('login')" style="flex:1">Entrar</button>
+      <button class="btn" onclick="doAuth('register')" style="flex:1">Registrar-se</button>
+    </div>
+  </div>
+</div>
+
+<!-- My Profile Tab (Edit) -->
+<div id="tab-profile" style="display:none">
+  <div class="card" style="max-width: 600px; margin: 0 auto;">
+    <h2 style="margin-bottom: 1.5rem;">El meu Perfil</h2>
+    <div class="profile-header">
+      <img id="my-avatar-preview" src="" class="avatar avatar-lg">
+      <div>
+        <h3 id="my-profile-name"></h3>
+        <p style="color:var(--muted); font-size:0.85rem; margin-top:0.5rem;">Pots pujar una nova foto (recomanat 1:1, max 2MB)</p>
+        <input type="file" id="my-avatar-file" accept="image/*" style="margin-top:0.5rem; font-size:0.8rem;">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Descripció (Bio)</label>
+      <textarea id="my-profile-bio" rows="4"></textarea>
+    </div>
+    <button class="btn btn-primary" onclick="saveProfile()">Guardar Canvis</button>
+    <p id="profile-msg" style="color:var(--ok); font-size:0.85rem; margin-top: 1rem;"></p>
+  </div>
+</div>
+
+<!-- View User Tab -->
+<div id="tab-user-view" style="display:none">
+  <div class="card" style="max-width: 800px; margin: 0 auto;">
+    <div class="profile-header">
+      <img id="view-avatar" src="" class="avatar avatar-lg">
+      <div>
+        <h2 id="view-username"></h2>
+        <p id="view-bio" style="color:var(--muted); margin-top:0.5rem;"></p>
+      </div>
+    </div>
+    
+    <h3 style="margin-bottom:1rem; margin-top:2rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.5rem;">Últimes partides</h3>
+    <div id="view-recent-games"></div>
+  </div>
+</div>
+
+<p id="refresh-info">Actualització automàtica cada 5 segons</p>
+
+<script>
+const API = '/api';
+let currentTab = 'ranking';
+let currentUser = sessionStorage.getItem('breakout_user');
+let currentDifficulty = 'normal';
+
+// Logout automàtic quan es tanca el navegador o la pestanya
+async function doWebLogout() {
+  if (!currentUser) return;
+  try {
+    await fetch(`${API}/auth/logout`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: currentUser }),
+      keepalive: true  // Permet que la petició acabi tot i que la pàgina es tanqui
+    });
+    sessionStorage.removeItem('breakout_user');
+    currentUser = null;
+  } catch(e) { /* silenciós */ }
+}
+
+// Detectar quan es tanca la pestanya/navegador
+window.addEventListener('beforeunload', () => {
+  if (currentUser) {
+    const data = JSON.stringify({ username: currentUser });
+    const blob = new Blob([data], { type: 'application/json' });
+    navigator.sendBeacon(`${API}/auth/logout`, blob);
+    sessionStorage.removeItem('breakout_user');
+  }
+});
+
+function setDifficulty(diff) {
+  currentDifficulty = diff;
+  document.getElementById('btn-diff-easy').className = diff === 'easy' ? 'btn btn-primary' : 'btn';
+  document.getElementById('btn-diff-normal').className = diff === 'normal' ? 'btn btn-primary' : 'btn';
+  document.getElementById('btn-diff-hard').className = diff === 'hard' ? 'btn btn-primary' : 'btn';
+  loadRanking();
+}
+
+function updateNav() {
+  const navSection = document.getElementById('nav-auth-section');
+  if (currentUser) {
+    navSection.innerHTML = `
+      <span style="color:var(--muted)">Hola, <strong style="color:var(--text)">${currentUser}</strong></span>
+      <button class="btn" onclick="logout()">Surt</button>
+    `;
+    document.getElementById('tab-btn-auth').style.display = 'none';
+    document.getElementById('tab-btn-profile').style.display = '';
+  } else {
+    navSection.innerHTML = `
+      <button class="btn btn-primary" onclick="showTab('auth')">Inicia Sessió</button>
+    `;
+    document.getElementById('tab-btn-auth').style.display = '';
+    document.getElementById('tab-btn-profile').style.display = 'none';
+    if (currentTab === 'profile') showTab('ranking');
+  }
+}
+
+function logout() {
+  sessionStorage.removeItem('breakout_user');
+  currentUser = null;
+  updateNav();
+  showTab('ranking');
+}
+
+function showTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  
+  if (document.getElementById('tab-btn-' + tab)) {
+      document.getElementById('tab-btn-' + tab).classList.add('active');
+  } else if (tab === 'ranking') {
+      document.querySelector('.tab').classList.add('active'); // primer botó
+  } else if (tab === 'active') {
+      document.querySelectorAll('.tab')[1].classList.add('active');
+  }
+
+  document.getElementById('tab-ranking').style.display = tab === 'ranking' ? '' : 'none';
+  document.getElementById('tab-active').style.display  = tab === 'active'  ? '' : 'none';
+  document.getElementById('tab-auth').style.display  = tab === 'auth'  ? '' : 'none';
+  document.getElementById('tab-profile').style.display  = tab === 'profile'  ? '' : 'none';
+  document.getElementById('tab-user-view').style.display  = tab === 'user-view'  ? '' : 'none';
+  
+  if (tab === 'profile') loadMyProfile();
+  if (tab !== 'user-view') document.getElementById('tab-btn-user-view').style.display = 'none';
+
+  refreshData();
+}
+
+async function doAuth(action) {
+  const u = document.getElementById('auth-username').value;
+  const p = document.getElementById('auth-password').value;
+  const msgEl = document.getElementById('auth-msg');
+  
+  try {
+    const res = await fetch(`${API}/auth/${action}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({username: u, password: p})
+    });
+    const data = await res.json();
+    
+    if (res.ok) {
+      sessionStorage.setItem('breakout_user', u);
+      currentUser = u;
+      updateNav();
+      showTab('ranking');
+    } else {
+      msgEl.textContent = data.error || 'Error desconegut';
+    }
+  } catch(e) {
+    msgEl.textContent = 'Error de connexió';
+  }
+}
+
+async function loadMyProfile() {
+  document.getElementById('my-profile-name').textContent = currentUser;
+  try {
+    const res = await fetch(`${API}/users/${currentUser}`);
+    if (res.ok) {
+      const data = await res.json();
+      document.getElementById('my-profile-bio').value = data.description || '';
+      document.getElementById('my-avatar-preview').src = data.base64Photo || 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
+    }
+  } catch(e) {}
+}
+
+async function saveProfile() {
+  const bio = document.getElementById('my-profile-bio').value;
+  const fileInput = document.getElementById('my-avatar-file');
+  const msg = document.getElementById('profile-msg');
+  
+  let base64Photo = document.getElementById('my-avatar-preview').src;
+  if (base64Photo === 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=') base64Photo = '';
+
+  const payload = { description: bio, base64Photo: base64Photo };
+  
+  // Convert image
+  if (fileInput.files && fileInput.files[0]) {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      payload.base64Photo = e.target.result;
+      document.getElementById('my-avatar-preview').src = e.target.result;
+      sendProfileUpdate(payload, msg);
+    };
+    reader.readAsDataURL(fileInput.files[0]);
+  } else {
+    sendProfileUpdate(payload, msg);
+  }
+}
+
+async function sendProfileUpdate(payload, msgEl) {
+  msgEl.style.color = "var(--muted)";
+  msgEl.textContent = "Guardant...";
+  try {
+    const res = await fetch(`${API}/users/${currentUser}/update`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+      msgEl.style.color = "var(--ok)";
+      msgEl.textContent = "Perfil guardat correctament!";
+    } else {
+      msgEl.style.color = "var(--err)";
+      msgEl.textContent = "Error al guardar el perfil.";
+    }
+  } catch(e) {
+    msgEl.style.color = "var(--err)";
+    msgEl.textContent = "Error de connexió.";
+  }
+  setTimeout(() => msgEl.textContent = "", 3000);
+}
+
+async function viewUser(username) {
+  document.getElementById('tab-btn-user-view').style.display = '';
+  document.getElementById('tab-btn-user-view').textContent = `Perfil de ${username}`;
+  showTab('user-view');
+  
+  document.getElementById('view-username').textContent = username;
+  document.getElementById('view-bio').textContent = 'Carregant...';
+  document.getElementById('view-recent-games').innerHTML = '<p class="empty">Carregant partides...</p>';
+  document.getElementById('view-avatar').src = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
+
+  try {
+    const res = await fetch(`${API}/users/${username}`);
+    if (res.ok) {
+      const data = await res.json();
+      document.getElementById('view-bio').textContent = data.description || 'Sense descripció.';
+      if (data.base64Photo) document.getElementById('view-avatar').src = data.base64Photo;
+      
+      const gamesHtml = data.recentGames.length === 0 ? '<p class="empty">Cap partida recent.</p>' : 
+        data.recentGames.map(g => {
+            return `<div class="card" style="padding:1rem; display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <strong>${g.score} pts</strong> - ${g.difficulty} 
+                <span class="pill ${g.status==='COMPLETED'?'completed':'gameover'}">${g.status}</span>
+                <div style="font-size:0.8rem; color:var(--muted); margin-top:0.3rem;">
+                  ID: ${g.gameId} | Blocs trencats: ${g.blocksDestroyed}
+                </div>
+              </div>
+              <div class="reactions-box" id="react-box-${g.gameId}" data-game="${g.gameId}">
+                <!-- Es carregarà asíncronament -->
+              </div>
+            </div>`;
+        }).join('');
+      document.getElementById('view-recent-games').innerHTML = gamesHtml;
+      
+      // Load reactions for these games
+      data.recentGames.forEach(g => loadReactions(g.gameId));
+    }
+  } catch(e) {
+    document.getElementById('view-bio').textContent = 'Error al carregar el perfil.';
+  }
+}
+
+async function loadReactions(gameId) {
+    try {
+        const res = await fetch(`${API}/ranking/${gameId}/reactions`);
+        const reactions = await res.json();
+        
+        let counts = { '👍': 0, '🔥': 0, '😲': 0 };
+        let iReacted = { '👍': false, '🔥': false, '😲': false };
+        
+        reactions.forEach(r => {
+            if (counts[r.reactionType] !== undefined) {
+                counts[r.reactionType]++;
+                if (currentUser && r.username === currentUser) {
+                    iReacted[r.reactionType] = true;
+                }
+            }
+        });
+
+        const box = document.getElementById(`react-box-${gameId}`);
+        if(box) {
+            box.innerHTML = Object.keys(counts).map(type => `
+                <button class="reaction-btn ${iReacted[type] ? 'active' : ''}" 
+                        onclick="toggleReaction('${gameId}', '${type}')"
+                        ${!currentUser ? 'disabled title="Fes login per reaccionar"' : ''}>
+                    ${type} ${counts[type] > 0 ? counts[type] : ''}
+                </button>
+            `).join('');
+        }
+    } catch(e) { console.error(e); }
+}
+
+async function toggleReaction(gameId, type) {
+    if (!currentUser) return;
+    try {
+        await fetch(`${API}/ranking/${gameId}/react`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({username: currentUser, type: type})
+        });
+        loadReactions(gameId); // reload this specific game's reactions
+    } catch(e) { console.error(e); }
+}
+
+async function refreshData() {
+  try {
+    const health = await fetch(`${API}/health`).then(r => r.json());
+    setBadge('badge-mysql', health.mysqlOnline ? 'Base de Dades: ✓ Activa' : 'Base de Dades: ✗ Error', health.mysqlOnline);
+    setBadge('badge-games', `Partides actives: ${health.activeGames}`, true);
+
+    if (currentTab === 'ranking') await loadRanking();
+    else if (currentTab === 'active') await loadActiveGames();
+  } catch(e) {
+    console.error(e);
+  }
+}
+
+async function loadRanking() {
+  try {
+    // Add cache-busting timestamp to fix the refresh
+    const data = await fetch(`${API}/ranking/top5?difficulty=${currentDifficulty}&t=${Date.now()}`).then(r => r.json());
+    setBadge('badge-source', `Font: ${data.source}`, true);
+    renderRanking(data.ranking || []);
+  } catch(e) {
+    console.error(e);
+    renderRanking([]);
+  }
+}
+
+function renderRanking(entries) {
+  const tbody = document.getElementById('ranking-body');
+  if (!entries.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="empty">Encara no hi ha resultats. Juga una partida!</td></tr>';
+    return;
+  }
+  tbody.innerHTML = entries.map((e, i) => {
+    const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+    const rankIcon  = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1;
+    const statusPill = e.status === 'COMPLETED' 
+        ? '<span class="pill completed">COMPLETAT</span>' 
+        : '<span class="pill gameover">GAME OVER</span>';
+        
+    return `<tr>
+      <td class="rank ${rankClass}">${rankIcon}</td>
+      <td><strong class="user-link" onclick="viewUser('${e.playerId}')">${e.playerId}</strong></td>
+      <td>${statusPill}</td>
+      <td class="score">${(e.score).toLocaleString()} pts</td>
+    </tr>`;
+  }).join('');
+}
+
+async function loadActiveGames() {
+  const games = await fetch(`${API}/games`).then(r => r.json());
+  const list  = document.getElementById('active-list');
+  if (!games.length) {
+    list.innerHTML = '<div class="empty">Cap partida activa en aquests moments.</div>';
+    return;
+  }
+  list.innerHTML = games.map(g => {
+    const pct = Math.max(0, 100 - (g.blocksRemaining / 60 * 100)).toFixed(0);
+    return `<div class="card" style="display:flex; align-items:center; gap:1rem; flex-wrap:wrap;">
+      <span style="font-family:monospace; color:var(--accent)">#${g.gameId}</span>
+      <span>👤 <span class="user-link" onclick="viewUser('${g.playerId}')">${g.playerId}</span></span>
+      <span>⭐ ${g.score} pts</span>
+      <span>❤️ ${g.lives}</span>
+      <span>
+        <div style="width:120px; background:rgba(255,255,255,0.05); border-radius:999px; height:6px;">
+          <div style="background:var(--accent); border-radius:999px; height:6px; width:${pct}%"></div>
+        </div>
+        <small style="color:var(--muted); font-size:0.7rem;">${g.blocksRemaining} blocs</small>
+      </span>
+      <span style="margin-left:auto">
+        <span class="pill ${g.status === 'ACTIVE' ? 'completed' : 'gameover'}">${g.status}</span>
+      </span>
+    </div>`;
+  }).join('');
+}
+
+function setBadge(id, text, ok) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = 'badge ' + (ok ? 'ok' : 'err');
+}
+
+// Inicialització
+updateNav();
+refreshData();
+setInterval(refreshData, 5000); // 5 segons per sensació de directe
+
+window.addEventListener('beforeunload', () => {
+  if (currentUser) {
+    sessionStorage.removeItem('breakout_user');
+  }
+});
+</script>
+</body>
+</html>

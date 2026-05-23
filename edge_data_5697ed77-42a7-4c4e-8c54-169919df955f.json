@@ -1,0 +1,10 @@
+[ {
+  "gameId" : "098256C6",
+  "playerId" : "Test1",
+  "score" : 80,
+  "status" : "GAME_OVER",
+  "difficulty" : "EASY",
+  "blocksDestroyed" : 3,
+  "finishedAt" : "2026-05-21T10:52:30.984535300Z",
+  "synced" : true
+} ]
